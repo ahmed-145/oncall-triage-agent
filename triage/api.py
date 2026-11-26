@@ -16,6 +16,7 @@ from triage.domain import Evidence
 from triage.engine import investigate
 from triage.tools import TOOLS, collect
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     token = os.getenv("WEBHOOK_TOKEN")

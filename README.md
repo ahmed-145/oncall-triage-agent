@@ -19,7 +19,7 @@ flowchart LR
   Agent --> Rules --> Model["Optional Ollama ranking"] --> Report["Markdown report for human review"]
 ```
 
-[Two-minute walkthrough](docs/oncall-demo.mp4)
+[Two-minute walkthrough](https://github.com/ahmed-145/oncall-triage-agent/releases/download/demo-v1/oncall-demo.mp4)
 
 ## Run the demo
 
