@@ -97,3 +97,17 @@ For live model evaluation, set `OLLAMA_URL` on `deployment/triage` to an Ollama 
 - Capture real evidence from each injected fault and use those snapshots for replay.
 - Use the replay failures to tune signal freshness and tie-breaking. Re-run the comparison against larger local models.
 - Add persistent reports and distributed trace export. The agent logs each investigation stage under its incident ID.
+
+## Publish an incident summary to GitHub
+
+Export a generated report, then preview the issue from your terminal:
+
+```bash
+kubectl --context kind-oncall -n oncall exec deployment/triage -- cat /reports/REPORT_ID.md > REPORT_ID.md
+python3 -m triage.publish_issue REPORT_ID.md --repo OWNER/REPO
+```
+
+Replace `REPORT_ID` with the generated ID. After reviewing the summary, supply
+`GITHUB_TOKEN` with Issues write access to the destination and repeat with
+`--publish`. The command submits the incident ID and ranked cause titles.
+The token stays in the operator's environment. Each publish creates an issue.

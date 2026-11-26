@@ -1,6 +1,9 @@
 name: Full evaluation
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/evaluation.yml']
   pull_request:
     paths: ['.github/workflows/evaluation.yml']
 permissions:
@@ -15,6 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        mode: [rules, model, hybrid]
         fault: [bad-deploy, slow-query, db-leak, oom, crash-loop, redis-down, dependency-timeout, cpu-throttle]
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +26,16 @@ jobs:
         with:
           cluster_name: oncall
       - run: make demo
+      - name: Start Ollama on the kind network
+        if: matrix.mode != 'rules'
+        env:
+          MODEL: qwen2.5:0.5b
+        run: |
+          docker run -d --name ollama --network kind ollama/ollama:0.12.11
+          docker exec ollama ollama pull "$MODEL"
+          host=$(docker inspect --format '{{(index .NetworkSettings.Networks "kind").IPAddress}}' ollama)
+          kubectl -n oncall set env deployment/triage OLLAMA_URL="http://$host:11434" OLLAMA_MODEL="$MODEL"
+
       - name: Wait for telemetry
         run: |
           for component in prometheus alertmanager kube-state postgres redis shop traffic alloy loki; do
@@ -29,7 +43,13 @@ jobs:
           done
           sleep 25
       - name: Inject and score fault
-        run: make eval EVAL_ARGS='--fault ${{ matrix.fault }} --timeout 90'
+        env:
+          MODE: ${{ matrix.mode }}
+          FAULT: ${{ matrix.fault }}
+        run: |
+          args=(--fault "$FAULT" --timeout 120 --mode "$MODE")
+          if [[ "$MODE" != rules ]]; then args+=(--require-model); fi
+          python3 -m triage.live_eval "${args[@]}"
       - name: Read incident reports
         if: always()
         run: kubectl -n oncall exec deployment/triage -- sh -c 'for report in /reports/*.md; do cat "$report"; done'

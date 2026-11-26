@@ -61,7 +61,10 @@ def main() -> None:
     parser.add_argument("--fault", choices=tuple(CAUSES), action="append")
     parser.add_argument("--timeout", type=int, default=75)
     parser.add_argument("--require-top1", action="store_true")
+    parser.add_argument("--require-model", action="store_true")
     args = parser.parse_args()
+    if args.require_model and args.mode == "rules":
+        parser.error("--require-model requires --mode model or hybrid")
     rollout("triage")
     kubectl("set", "env", "deployment/triage", f"TRIAGE_MODE={args.mode}")
     rollout("triage")
@@ -87,6 +90,8 @@ def main() -> None:
     print(f"| {args.mode} | {score(rows)} |")
     if any(state["model_status"] == "no report" for _, state, _ in rows):
         raise SystemExit("At least one injected fault produced no report")
+    if args.require_model and any(state["model_status"] != "used" for _, state, _ in rows):
+        raise SystemExit("Ollama was unavailable on at least one fault")
     if args.require_top1 and any(
         not state["hypotheses"] or state["hypotheses"][0][0] != expected
         for expected, state, _ in rows
