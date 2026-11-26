@@ -21,7 +21,8 @@ def issue_payload(report: Path) -> dict[str, str]:
     match = re.search(r"^<!-- triage-eval (.+) -->$", document, re.MULTILINE)
     if not match:
         raise ValueError("Report is missing investigation metadata")
-    ranks = json.loads(match[1])["hypotheses"]
+    metadata = json.loads(match[1])
+    ranks = metadata.get("hypotheses") if isinstance(metadata, dict) else None
     if not isinstance(ranks, list):
         raise ValueError("Report has invalid hypotheses")
     causes = []

@@ -85,6 +85,18 @@ OLLAMA_URL=http://127.0.0.1:11434 OLLAMA_MODEL=qwen2.5:0.5b make replay
 
 For live model evaluation, set `OLLAMA_URL` on `deployment/triage` to an Ollama endpoint reachable from the cluster, then run `make eval EVAL_ARGS='--mode hybrid'` or `--mode model`. Set `OLLAMA_MODEL` to select a different model.
 
+### Live Ollama comparison
+
+The benchmark ran each of the eight faults in its own kind cluster for each mode. Both model modes used Ollama with `qwen2.5:0.5b`. Each report used five evidence calls and incurred $0 in API charges. Reproduce the run from the **Full evaluation** workflow or run `make eval` once per mode against a cluster configured with Ollama. [Benchmark logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45801257559).
+
+| Mode | Top 1 | Top 3 | Confident and wrong | Mean injection to observation | Mean alert to report | Total tokens | Model used |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| rules | 8/8 | 8/8 | 0/8 | 35.0 s | 1.58 s | 0 | 0/8 |
+| model | 1/8 | 3/8 | 0/8 | 32.2 s | 2.90 s | 1283 | 8/8 |
+| hybrid | 8/8 | 8/8 | 0/8 | 34.0 s | 3.63 s | 1356 | 8/8 |
+
+Hybrid matched rules-only accuracy and took longer from alert to report. Model-only missed the top cause on seven of eight faults.
+
 ## Decisions and limits
 
 - The [triage role](ops/rbac.yaml) permits reading pods, events, and ReplicaSets in the demo namespace. Evidence collection uses fixed PromQL, LogQL, and Kubernetes queries. The [MCP server](triage/mcp_server.py) exposes the same five tools over stdio.
