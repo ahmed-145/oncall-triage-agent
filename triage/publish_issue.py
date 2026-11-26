@@ -24,11 +24,11 @@ def issue_payload(report: Path) -> dict[str, str]:
     metadata = json.loads(match[1])
     ranks = metadata.get("hypotheses") if isinstance(metadata, dict) else None
     if not isinstance(ranks, list):
-        raise ValueError("Report has invalid hypotheses")
+        raise TypeError("Report has invalid hypotheses")
     causes = []
     for row in ranks[:3]:
         if not isinstance(row, list) or len(row) != 2 or not isinstance(row[0], str):
-            raise ValueError("Report has invalid hypotheses")
+            raise TypeError("Report has invalid hypotheses")
         if row[0] not in CAUSES:
             raise ValueError("Report contains an unknown cause")
         causes.append(CAUSES[row[0]].title)
@@ -52,7 +52,7 @@ def publish(repo: str, token: str, payload: dict[str, str]) -> str:
     with urlopen(request, timeout=15) as response:
         url = json.load(response)["html_url"]
     if not isinstance(url, str):
-        raise ValueError("GitHub returned an invalid issue URL")
+        raise TypeError("GitHub returned an invalid issue URL")
     return url
 
 
@@ -75,7 +75,7 @@ def main() -> None:
         parser.exit(1, f"GitHub rejected the issue request (HTTP {exc.code}).\n")
     except URLError as exc:
         parser.exit(1, f"GitHub issue request failed: {exc.reason}\n")
-    except (OSError, ValueError, KeyError) as exc:
+    except (OSError, ValueError, TypeError, KeyError) as exc:
         parser.exit(1, f"{exc}\n")
 
 
