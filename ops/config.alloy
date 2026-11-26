@@ -1,0 +1,26 @@
+discovery.kubernetes "shop" {
+  role = "pod"
+  namespaces {
+    names = ["oncall"]
+  }
+  selectors {
+    role = "pod"
+    label = "app=shop"
+  }
+}
+discovery.relabel "shop" {
+  targets = discovery.kubernetes.shop.targets
+  rule {
+    target_label = "app"
+    replacement = "shop"
+  }
+}
+loki.source.kubernetes "shop" {
+  targets = discovery.relabel.shop.output
+  forward_to = [loki.write.local.receiver]
+}
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {"id":"new-release","expected":"bad-deploy","signals":["release_errors"],"detail":"New ReplicaSet serving HTTP 500"},
+  {"id":"slow-database","expected":"slow-query","signals":["slow_queries"],"detail":"Query duration increased while the pool remained available"},
+  {"id":"pool-timeouts","expected":"db-leak","signals":["pool_full"],"detail":"Pool acquisition timed out"},
+  {"id":"container-memory","expected":"oom","signals":["oom_killed"],"detail":"Kubernetes recorded OOMKilled"},
+  {"id":"startup-failure","expected":"crash-loop","signals":["bad_config"],"detail":"Container terminated with configuration exit code 78"},
+  {"id":"queue-unavailable","expected":"redis-down","signals":["redis_errors"],"detail":"Order queue endpoint refused connections"},
+  {"id":"upstream-deadline","expected":"dependency-timeout","signals":["upstream_timeouts"],"detail":"Upstream request exceeded the deadline"},
+  {"id":"cpu-pressure","expected":"cpu-throttle","signals":["cpu_throttling"],"detail":"Container throttled in most scheduling periods"},
+  {"id":"overlapping-signals","expected":"redis-down","signals":["release_errors","redis_errors"],"detail":"Window contains deployment errors from before Redis shutdown"},
+  {"id":"missing-cause","expected":"slow-query","signals":[],"detail":"Only request latency was captured"}
+]

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+k=(kubectl --context kind-oncall --namespace oncall)
+case "${1-}:${2-}" in
+  clear:)
+    "${k[@]}" scale deployment/redis --replicas=1
+    "${k[@]}" set env deployment/shop SHOP_FAULT-
+    ;;
+  inject:redis-down)
+    "${k[@]}" set env deployment/shop SHOP_FAULT-
+    "${k[@]}" scale deployment/redis --replicas=0
+    ;;
+  inject:bad-deploy|inject:slow-query|inject:db-leak|inject:oom|inject:crash-loop|inject:dependency-timeout|inject:cpu-throttle)
+    "${k[@]}" scale deployment/redis --replicas=1
+    "${k[@]}" set env deployment/shop SHOP_FAULT="$2"
+    ;;
+  *)
+    echo "Usage: faultctl inject {bad-deploy|slow-query|db-leak|oom|crash-loop|redis-down|dependency-timeout|cpu-throttle} | faultctl clear" >&2
+    exit 2
+    ;;
+esac

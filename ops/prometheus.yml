@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+rule_files: [rules.yml]
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+scrape_configs:
+  - job_name: shop
+    static_configs:
+      - targets: ['shop:8000']
+  - job_name: triage
+    static_configs:
+      - targets: ['triage:8000']
+  - job_name: cadvisor
+    scheme: https
+    metrics_path: /metrics/cadvisor
+    authorization:
+      credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tls_config:
+      insecure_skip_verify: true
+    static_configs:
+      - targets: ['oncall-control-plane:10250']
+  - job_name: kube-state
+    static_configs:
+      - targets: ['kube-state:8080']
