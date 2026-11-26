@@ -40,6 +40,18 @@ The traffic generator submits orders in the background. Give the telemetry stack
 
 For the provisioned Grafana dashboard, run `kubectl --context kind-oncall -n oncall port-forward svc/grafana 3000:3000`. Open localhost:3000, sign in with the demo Grafana defaults, and select **On-call demo**. Open Explore and choose Loki to inspect the `{app="shop"}` stream.
 
+## Develop
+
+Install the runtime and development dependencies together:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+make check
+```
+
+Set `WEBHOOK_TOKEN` before starting the FastAPI service outside the provided
+demo deployment. Startup fails if the token is missing or blank.
+
 ## Evaluate
 
 ```bash
@@ -101,8 +113,27 @@ Hybrid matched rules-only accuracy and took longer from alert to report. Model-o
 
 - The [triage role](ops/rbac.yaml) permits reading pods, events, and ReplicaSets in the demo namespace. Evidence collection uses fixed PromQL, LogQL, and Kubernetes queries. The [MCP server](triage/mcp_server.py) exposes the same five tools over stdio.
 - The model receives allowlisted structured signals and candidate IDs. External logs and alert labels stay in the report. Hybrid mode only reorders candidates already supported by the rules, and all proposed commands come from a fixed catalogue. Approval happens outside the agent by reviewing the report before running a command.
-- Reports use an ephemeral volume in the agent pod. Export reports before replacing the pod. Credentials and the monitoring configuration are for the local demo.
+- Reports use an ephemeral volume in the agent pod. Run `make export-reports` to copy them to local `reports/` before replacing the pod. Credentials and the monitoring configuration are for the local demo.
 - Alerts and evidence can overlap while the system recovers. The rules use short windows and a fixed tie order. The demo covers one namespace and one kind node.
+
+## Design tradeoffs
+
+- The rules map a small set of allowlisted signals to known causes. These cases
+  largely test whether the agent notices the right signal. The 0.5B model can
+  misrank or overlook it, and hybrid adds inference time. These results apply
+  to the measured demo faults and fixtures.
+- Raw logs and alert labels stay outside the prompt. The model sees structured
+  signals, candidate IDs, and the rules baseline. Hybrid can only reorder
+  causes already supported by the rules. Recovery commands come from a fixed
+  catalogue and a human decides whether to run them.
+- Alertmanager can retry notifications. A fingerprint and start time determine
+  the report filename. The agent closes a temporary file before atomically
+  linking it to that filename. One concurrent writer wins, and later
+  deliveries reuse the completed report. Concurrent deliveries can still
+  duplicate evidence collection before one report wins.
+- Injection-to-observation includes detection and report polling.
+  Alert-to-report starts at the alert timestamp. The linear LangGraph workflow
+  and MCP server demonstrate their integration points.
 
 ## What I would do next
 

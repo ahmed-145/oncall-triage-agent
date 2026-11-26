@@ -1,0 +1,24 @@
+name: Publish demo video
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-demo.yml']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 433678075ce87046b9678f975bd2524836efeff5
+          persist-credentials: false
+      - name: Publish walkthrough asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view demo-v1 >/dev/null 2>&1; then
+            gh release create demo-v1 --target 433678075ce87046b9678f975bd2524836efeff5 \
+              --title 'Demo walkthrough' --notes 'Two-minute on-call triage walkthrough.' --latest=false
+          fi
+          gh release upload demo-v1 docs/oncall-demo.mp4

@@ -14,7 +14,10 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-      - run: python -m pip install -r requirements.txt pytest ruff mypy
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
       - run: make check
       - run: make replay
       - run: python -m triage.evaluate --graph --mode rules
@@ -35,6 +38,10 @@ jobs:
           done
           sleep 15
       - run: make eval EVAL_ARGS='--fault oom --timeout 90 --require-top1'
+      - name: Verify report export
+        run: |
+          make export-reports
+          test -n "$(find reports -maxdepth 1 -name '*.md' -print -quit)"
       - if: failure()
         run: |
           kubectl -n oncall get pods -o wide

@@ -3,10 +3,12 @@ import hmac
 import os
 import tempfile
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel, Field
 
@@ -14,7 +16,16 @@ from triage.domain import Evidence
 from triage.engine import investigate
 from triage.tools import TOOLS, collect
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    token = os.getenv("WEBHOOK_TOKEN")
+    if not token or not token.strip():
+        raise RuntimeError("WEBHOOK_TOKEN must be set before starting triage")
+    app.state.webhook_token = token
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 DURATION = Histogram("triage_investigation_duration_seconds", "Investigation duration")
 TOKENS = Counter("triage_model_tokens_total", "Model tokens")
 INVESTIGATIONS = Counter("triage_investigations_total", "Reports by model status", ["model"])
@@ -42,8 +53,9 @@ def metrics() -> Response:
 
 
 @app.post("/alerts")
-def webhook(notification: Notification, authorization: str = Header(default="")) -> dict:
-    secret = os.environ["WEBHOOK_TOKEN"]
+def webhook(notification: Notification, request: Request,
+            authorization: str = Header(default="")) -> dict:
+    secret = request.app.state.webhook_token
     if not hmac.compare_digest(authorization.encode(), f"Bearer {secret}".encode()):
         raise HTTPException(401)
     folder = Path(os.getenv("REPORT_DIR", "reports"))
