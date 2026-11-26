@@ -2,12 +2,15 @@ import json
 import os
 import time
 from contextlib import asynccontextmanager
+from urllib.request import urlopen
 
 import psycopg
 import redis
 from fastapi import FastAPI, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from psycopg_pool import ConnectionPool, PoolTimeout
+from redis.backoff import NoBackoff
+from redis.retry import Retry
 
 MODE = os.getenv("SHOP_FAULT", "")
 if MODE == "crash-loop":
@@ -16,7 +19,8 @@ if MODE == "crash-loop":
 
 POOL = ConnectionPool(os.getenv("DATABASE_URL", "postgresql://shop:shop@postgres/shop"),
                       min_size=0, max_size=3, timeout=0.4, open=False)
-CACHE = redis.Redis(host="redis", socket_timeout=0.4, socket_connect_timeout=0.4)
+CACHE = redis.Redis(host="redis", socket_timeout=0.4, socket_connect_timeout=0.4,
+                    retry=Retry(NoBackoff(), 0))
 REQUESTS = Counter("shop_requests_total", "Shop requests", ["status"])
 DURATION = Histogram("shop_request_duration_seconds", "Shop request latency")
 EVENTS = Counter("shop_fault_events_total", "Shop diagnostic events", ["signal"])
@@ -84,8 +88,11 @@ def order() -> dict:
         while time.monotonic() < deadline:
             sum(range(20000))
     if MODE == "dependency-timeout":
-        time.sleep(0.5)
-        fail("upstream_timeouts", 504)
+        try:
+            with urlopen("http://worker:8000/demo-delay", timeout=0.5):
+                pass
+        except OSError:
+            fail("upstream_timeouts", 504)
     try:
         with POOL.connection() as conn:
             if MODE == "slow-query":

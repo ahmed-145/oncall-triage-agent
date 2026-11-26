@@ -8,6 +8,9 @@ from typing import Any
 from triage.domain import Evidence
 from triage.engine import State, investigate
 
+TABLE = ("| Mode | Top 1 | Top 3 | Confident and wrong | Mean ms | Mean alert-to-report ms | "
+         "Live calls | Tokens | Cost | Model used |\n"
+         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "replay.json"
 
 
@@ -21,8 +24,11 @@ def score(rows: list[tuple[str, State, float]]) -> str:
                         for ranks, hit in zip(hypotheses, correct, strict=True)]
     used = sum(state["model_status"] == "used" for _, state, _ in rows)
     tokens = sum(state["tokens"] for _, state, _ in rows)
+    alert_latencies = [state["alert_to_report_ms"] for _, state, _ in rows
+                       if state.get("alert_to_report_ms") is not None]
+    alert_ms = f"{mean(alert_latencies):.2f}" if alert_latencies else "—"
     return (f"{mean(correct):.0%} | {mean(top_three):.0%} | "
-            f"{mean(false_confidence):.0%} | {mean(ms for _, _, ms in rows):.2f} | "
+            f"{mean(false_confidence):.0%} | {mean(ms for _, _, ms in rows):.2f} | {alert_ms} | "
             f"{mean(state.get('tool_calls', 0) for _, state, _ in rows):.1f} | {tokens} | $0.00 | {used}/{len(rows)}")
 
 
@@ -38,12 +44,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Score saved incident evidence")
     parser.add_argument("--graph", action="store_true")
     parser.add_argument("--mode", choices=("rules", "model", "hybrid"))
+    parser.add_argument("--require-model", action="store_true")
     args = parser.parse_args()
     cases = json.loads(FIXTURES.read_text())
-    print("| Mode | Top 1 | Top 3 | Confident and wrong | Mean ms | Live calls | Tokens | Cost | Model used |")
-    print("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    print(TABLE)
+    incomplete = False
     for mode in (args.mode,) if args.mode else ("rules", "model", "hybrid"):
-        print(f"| {mode} | {score([run_case(case, mode, args.graph) for case in cases])} |")
+        rows = [run_case(case, mode, args.graph) for case in cases]
+        print(f"| {mode} | {score(rows)} |")
+        if mode != "rules" and any(state["model_status"] != "used" for _, state, _ in rows):
+            incomplete = True
+    if args.require_model and incomplete:
+        raise SystemExit("The model was unavailable on at least one fixture")
 
 
 if __name__ == "__main__":

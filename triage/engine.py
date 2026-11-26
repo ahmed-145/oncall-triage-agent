@@ -4,6 +4,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict
+from datetime import UTC, datetime
 from functools import wraps
 from itertools import pairwise
 from typing import TypedDict, cast
@@ -17,6 +18,7 @@ LOGGER = logging.getLogger('uvicorn.error.triage')
 class State(TypedDict, total=False):
     incident: str
     alert_name: str
+    alert_to_report_ms: float
     evidence: list[Evidence]
     hypotheses: list[tuple[str, float]]
     model_status: str
@@ -31,6 +33,7 @@ def model_rank(evidence: list[Evidence], baseline: list[tuple[str, float]]) -> t
         "model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
         "stream": False,
         "format": "json",
+        "options": {"temperature": 0, "seed": 42, "num_predict": 128},
         "messages": [
             {"role": "system", "content": (
                 "Rank up to three supported cause IDs. Return JSON with a causes array. "
@@ -91,7 +94,7 @@ def render(state: State) -> str:
     lines.extend(f"- {item.source}: {literal(item.detail)}" for item in evidence if item.error)
     lines += ["- External dependencies and production systems.", "",
               f"Model status: {state['model_status']}", ""]
-    metadata = {key: state.get(key) for key in ("hypotheses", "model_status", "tokens", "tool_calls", "alert_name")}
+    metadata = {key: state.get(key) for key in ("hypotheses", "model_status", "tokens", "tool_calls", "alert_name", "alert_to_report_ms")}
     safe_metadata = json.dumps(metadata).replace("<", r"<").replace(">", r">")
     lines += [f"<!-- triage-eval {safe_metadata} -->", ""]
     return "\n".join(lines)
@@ -138,7 +141,17 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
 
     @trace
     def report(state: State) -> State:
-        return {"report": render(state)}
+        update: State = {}
+        alert = next((item for item in state["evidence"] if item.source == "alertmanager"), None)
+        if alert:
+            try:
+                started_at = datetime.fromisoformat(alert.timestamp)
+                duration = datetime.now(UTC) - started_at
+                update["alert_to_report_ms"] = round(max(0, duration.total_seconds()) * 1000, 2)
+            except (ValueError, TypeError):
+                pass
+        update["report"] = render({**state, **update})
+        return update
 
     state: State = {"incident": incident, "tool_calls": tool_calls, "alert_name": alert_name}
     started = time.monotonic()

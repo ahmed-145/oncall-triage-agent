@@ -7,7 +7,7 @@ from typing import cast
 
 from triage.domain import CAUSES
 from triage.engine import State
-from triage.evaluate import score
+from triage.evaluate import TABLE, score
 
 KUBECTL = ["kubectl", "--context", "kind-oncall", "-n", "oncall"]
 ALERTS = {
@@ -83,8 +83,7 @@ def main() -> None:
             rows.append((name, state, elapsed_ms))
     finally:
         fault("clear")
-    print("| Mode | Top 1 | Top 3 | Confident and wrong | Mean ms | Live calls | Tokens | Cost | Model used |")
-    print("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
+    print(TABLE)
     print(f"| {args.mode} | {score(rows)} |")
     if any(state["model_status"] == "no report" for _, state, _ in rows):
         raise SystemExit("At least one injected fault produced no report")

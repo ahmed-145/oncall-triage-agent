@@ -1,483 +1,278 @@
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "prometheus"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "prometheus"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "prometheus"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "prometheus",
-            "image": "prom/prometheus:v3.5.0",
-            "ports": [
-              {
-                "containerPort": 9090
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "args": [
-              "--config.file=/config/prometheus.yml",
-              "--storage.tsdb.retention.time=2h"
-            ],
-            "volumeMounts": [
-              {
-                "name": "config",
-                "mountPath": "/config",
-                "readOnly": true
-              }
-            ]
-          }
-        ],
-        "automountServiceAccountToken": true,
-        "volumes": [
-          {
-            "name": "config",
-            "configMap": {
-              "name": "prometheus-config"
-            }
-          }
-        ],
-        "serviceAccountName": "prometheus"
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:v3.5.0
+        ports:
+        - containerPort: 9090
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        args:
+        - --config.file=/config/prometheus.yml
+        - --storage.tsdb.retention.time=2h
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+      automountServiceAccountToken: true
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-config
+      serviceAccountName: prometheus
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "prometheus"
-  },
-  "spec": {
-    "selector": {
-      "app": "prometheus"
-    },
-    "ports": [
-      {
-        "port": 9090
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
 ---
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "alertmanager"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "alertmanager"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "alertmanager"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "alertmanager",
-            "image": "prom/alertmanager:v0.28.1",
-            "ports": [
-              {
-                "containerPort": 9093
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "args": [
-              "--config.file=/config/alertmanager.yml"
-            ],
-            "volumeMounts": [
-              {
-                "name": "config",
-                "mountPath": "/config",
-                "readOnly": true
-              }
-            ]
-          }
-        ],
-        "automountServiceAccountToken": false,
-        "volumes": [
-          {
-            "name": "config",
-            "configMap": {
-              "name": "alertmanager-config"
-            }
-          }
-        ]
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+spec:
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:v0.28.1
+        ports:
+        - containerPort: 9093
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        args:
+        - --config.file=/config/alertmanager.yml
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+      automountServiceAccountToken: false
+      volumes:
+      - name: config
+        configMap:
+          name: alertmanager-config
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "alertmanager"
-  },
-  "spec": {
-    "selector": {
-      "app": "alertmanager"
-    },
-    "ports": [
-      {
-        "port": 9093
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+spec:
+  selector:
+    app: alertmanager
+  ports:
+  - port: 9093
 ---
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "loki"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "loki"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "loki"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "loki",
-            "image": "grafana/loki:3.5.3",
-            "ports": [
-              {
-                "containerPort": 3100
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "args": [
-              "-config.file=/etc/loki/local-config.yaml"
-            ]
-          }
-        ],
-        "automountServiceAccountToken": false
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+spec:
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+      - name: loki
+        image: grafana/loki:3.5.3
+        ports:
+        - containerPort: 3100
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        args:
+        - -config.file=/etc/loki/local-config.yaml
+      automountServiceAccountToken: false
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "loki"
-  },
-  "spec": {
-    "selector": {
-      "app": "loki"
-    },
-    "ports": [
-      {
-        "port": 3100
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+spec:
+  selector:
+    app: loki
+  ports:
+  - port: 3100
 ---
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "alloy"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "alloy"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "alloy"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "alloy",
-            "image": "grafana/alloy:v1.10.2",
-            "ports": [
-              {
-                "containerPort": 12345
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "args": [
-              "run",
-              "/config/config.alloy"
-            ],
-            "volumeMounts": [
-              {
-                "name": "config",
-                "mountPath": "/config",
-                "readOnly": true
-              }
-            ]
-          }
-        ],
-        "automountServiceAccountToken": true,
-        "volumes": [
-          {
-            "name": "config",
-            "configMap": {
-              "name": "alloy-config"
-            }
-          }
-        ],
-        "serviceAccountName": "alloy"
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alloy
+spec:
+  selector:
+    matchLabels:
+      app: alloy
+  template:
+    metadata:
+      labels:
+        app: alloy
+    spec:
+      containers:
+      - name: alloy
+        image: grafana/alloy:v1.10.2
+        ports:
+        - containerPort: 12345
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        args:
+        - run
+        - /config/config.alloy
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+      automountServiceAccountToken: true
+      volumes:
+      - name: config
+        configMap:
+          name: alloy-config
+      serviceAccountName: alloy
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "alloy"
-  },
-  "spec": {
-    "selector": {
-      "app": "alloy"
-    },
-    "ports": [
-      {
-        "port": 12345
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: alloy
+spec:
+  selector:
+    app: alloy
+  ports:
+  - port: 12345
 ---
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "kube-state"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "kube-state"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "kube-state"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "kube-state",
-            "image": "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.15.0",
-            "ports": [
-              {
-                "containerPort": 8080
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "args": [
-              "--namespaces=oncall",
-              "--resources=pods"
-            ]
-          }
-        ],
-        "automountServiceAccountToken": true,
-        "serviceAccountName": "kube-state"
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state
+spec:
+  selector:
+    matchLabels:
+      app: kube-state
+  template:
+    metadata:
+      labels:
+        app: kube-state
+    spec:
+      containers:
+      - name: kube-state
+        image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.15.0
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        args:
+        - --namespaces=oncall
+        - --resources=pods
+      automountServiceAccountToken: true
+      serviceAccountName: kube-state
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "kube-state"
-  },
-  "spec": {
-    "selector": {
-      "app": "kube-state"
-    },
-    "ports": [
-      {
-        "port": 8080
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state
+spec:
+  selector:
+    app: kube-state
+  ports:
+  - port: 8080
 ---
-{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-    "name": "grafana"
-  },
-  "spec": {
-    "selector": {
-      "matchLabels": {
-        "app": "grafana"
-      }
-    },
-    "template": {
-      "metadata": {
-        "labels": {
-          "app": "grafana"
-        }
-      },
-      "spec": {
-        "containers": [
-          {
-            "name": "grafana",
-            "image": "grafana/grafana:12.1.1",
-            "ports": [
-              {
-                "containerPort": 3000
-              }
-            ],
-            "resources": {
-              "limits": {
-                "memory": "512Mi",
-                "cpu": "1"
-              },
-              "requests": {
-                "cpu": "25m",
-                "memory": "32Mi"
-              }
-            },
-            "volumeMounts": [
-              {
-                "name": "grafana-config",
-                "mountPath": "/etc/grafana/provisioning"
-              },
-              {
-                "name": "grafana-dashboard",
-                "mountPath": "/var/lib/grafana/dashboards"
-              }
-            ]
-          }
-        ],
-        "automountServiceAccountToken": false,
-        "volumes": [
-          {
-            "name": "grafana-config",
-            "configMap": {
-              "name": "grafana-config",
-              "items": [
-                {
-                  "key": "datasource.yml",
-                  "path": "datasources/local.yml"
-                },
-                {
-                  "key": "provider.yml",
-                  "path": "dashboards/local.yml"
-                }
-              ]
-            }
-          },
-          {
-            "name": "grafana-dashboard",
-            "configMap": {
-              "name": "grafana-dashboard"
-            }
-          }
-        ]
-      }
-    }
-  }
-}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:12.1.1
+        ports:
+        - containerPort: 3000
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: '1'
+          requests:
+            cpu: 25m
+            memory: 32Mi
+        volumeMounts:
+        - name: grafana-config
+          mountPath: /etc/grafana/provisioning
+        - name: grafana-dashboard
+          mountPath: /var/lib/grafana/dashboards
+      automountServiceAccountToken: false
+      volumes:
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+          items:
+          - key: datasource.yml
+            path: datasources/local.yml
+          - key: provider.yml
+            path: dashboards/local.yml
+      - name: grafana-dashboard
+        configMap:
+          name: grafana-dashboard
 ---
-{
-  "apiVersion": "v1",
-  "kind": "Service",
-  "metadata": {
-    "name": "grafana"
-  },
-  "spec": {
-    "selector": {
-      "app": "grafana"
-    },
-    "ports": [
-      {
-        "port": 3000
-      }
-    ]
-  }
-}
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000

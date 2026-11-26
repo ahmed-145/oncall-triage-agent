@@ -1,0 +1,56 @@
+name: Full evaluation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['.github/workflows/evaluation.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        fault: [bad-deploy, slow-query, db-leak, oom, crash-loop, redis-down, dependency-timeout, cpu-throttle]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: oncall
+      - run: make demo
+      - name: Wait for telemetry
+        run: |
+          for component in prometheus alertmanager kube-state postgres redis shop traffic alloy loki; do
+            kubectl -n oncall rollout status "deployment/$component" --timeout=120s
+          done
+          sleep 25
+      - name: Inject and score fault
+        run: make eval EVAL_ARGS='--fault ${{ matrix.fault }} --timeout 90'
+      - name: Read incident reports
+        if: always()
+        run: kubectl -n oncall exec deployment/triage -- sh -c 'for report in /reports/*.md; do cat "$report"; done'
+      - name: Show cluster diagnostics
+        if: failure()
+        run: |
+          kubectl -n oncall get pods -o wide
+          kubectl -n oncall get events --sort-by=.lastTimestamp
+          kubectl -n oncall logs deployment/triage --tail=50
+          kubectl -n oncall logs deployment/prometheus --tail=50
+          kubectl -n oncall logs deployment/alertmanager --tail=50
+  ollama-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OLLAMA_URL: http://127.0.0.1:11434
+      OLLAMA_MODEL: qwen2.5:0.5b
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run -d --name ollama -p 127.0.0.1:11434:11434 ollama/ollama:0.12.11
+      - run: docker exec ollama ollama pull "$OLLAMA_MODEL"
+      - run: python3 -m triage.evaluate --require-model
+      - if: failure()
+        run: docker logs --tail=50 ollama

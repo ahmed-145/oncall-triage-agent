@@ -21,6 +21,10 @@ def http_app(env: dict, start_response: Any) -> Any:
     if env["PATH_INFO"] == "/healthz":
         start_response("200 OK", [("Content-Type", "application/json")])
         return [b'{"status":"ok"}']
+    if env["PATH_INFO"] == "/demo-delay":
+        time.sleep(1)
+        start_response("204 No Content", [])
+        return []
     return METRICS(env, start_response)
 
 
