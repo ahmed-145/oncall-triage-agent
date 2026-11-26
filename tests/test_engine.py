@@ -38,7 +38,7 @@ class EngineTests(unittest.TestCase):
         self.assertNotIn(injection.encode(), open_url.call_args.args[0].data)
 
     def test_no_evidence_means_no_command(self):
-        result = investigate("unknown", lambda: [])
+        result = investigate("unknown", list)
         self.assertEqual(result["hypotheses"], [])
         self.assertNotIn("awaiting human approval", result["report"])
 

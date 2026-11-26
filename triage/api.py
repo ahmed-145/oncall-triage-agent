@@ -57,14 +57,14 @@ def webhook(notification: Notification, authorization: str = Header(default=""))
         if not target.exists():
             started = time.monotonic()
 
-            def evidence() -> list[Evidence]:
-                return [Evidence("alertmanager", "", "", detail=(
-                    f"{alert.startsAt} {alert.labels.get('alertname', '')[:120]}"
-                )), *collect()]
+            alert_name = alert.labels.get("alertname", "")[:120]
+            trigger = Evidence("alertmanager", alert.startsAt, "", detail=alert_name)
+
+            def evidence(event: Evidence = trigger) -> list[Evidence]:
+                return [event, *collect()]
 
             state = investigate(incident, evidence, os.getenv("TRIAGE_MODE", "hybrid"),
-                                graph=True, tool_calls=len(TOOLS),
-                                alert_name=alert.labels.get("alertname", "")[:120])
+                                graph=True, tool_calls=len(TOOLS), alert_name=alert_name)
             with tempfile.NamedTemporaryFile(mode="w", dir=folder, delete=False) as handle:
                 handle.write(state["report"])
             Path(handle.name).replace(target)

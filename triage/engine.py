@@ -4,12 +4,14 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import asdict
+from functools import wraps
+from itertools import pairwise
 from typing import TypedDict
 from urllib.request import Request, urlopen
 
 from triage.domain import CAUSES, RUNBOOKS, Evidence, rank
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('uvicorn.error.triage')
 
 
 class State(TypedDict, total=False):
@@ -100,9 +102,23 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
     if mode not in {"rules", "model", "hybrid"}:
         raise ValueError(f"Unknown mode: {mode}")
 
+    def trace(node: Callable[[State], State]) -> Callable[[State], State]:
+        @wraps(node)
+        def timed(state: State) -> State:
+            started = time.monotonic()
+            try:
+                return node(state)
+            finally:
+                LOGGER.info("investigation=%s stage=%s duration_ms=%.1f", incident,
+                            node.__name__, (time.monotonic() - started) * 1000)
+
+        return timed
+
+    @trace
     def gather(_: State) -> State:
         return {"evidence": collect()}
 
+    @trace
     def hypothesize(state: State) -> State:
         baseline = rank(state["evidence"]) if mode != "model" else []
         result: State = {"hypotheses": baseline, "model_status": "disabled", "tokens": 0}
@@ -119,6 +135,7 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
                 result["model_status"] = "unavailable"
         return result
 
+    @trace
     def report(state: State) -> State:
         return {"report": render(state)}
 
@@ -132,7 +149,7 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
         for node in nodes:
             workflow.add_node(node.__name__, node)
         path = (START, *(node.__name__ for node in nodes), END)
-        for source, target in zip(path, path[1:]):
+        for source, target in pairwise(path):
             workflow.add_edge(source, target)
         state = workflow.compile().invoke(state)  # type: ignore[assignment]
     else:
