@@ -6,7 +6,7 @@ from collections.abc import Callable
 from dataclasses import asdict
 from functools import wraps
 from itertools import pairwise
-from typing import TypedDict
+from typing import TypedDict, cast
 from urllib.request import Request, urlopen
 
 from triage.domain import CAUSES, RUNBOOKS, Evidence, rank
@@ -151,7 +151,7 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
         path = (START, *(node.__name__ for node in nodes), END)
         for source, target in pairwise(path):
             workflow.add_edge(source, target)
-        state = workflow.compile().invoke(state)  # type: ignore[assignment]
+        state = cast(State, workflow.compile().invoke(state))
     else:
         for node in nodes:
             state.update(node(state))
