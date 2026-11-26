@@ -30,6 +30,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "args": [
@@ -110,6 +114,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "args": [
@@ -188,6 +196,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "args": [
@@ -251,6 +263,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "args": [
@@ -331,6 +347,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "args": [
@@ -396,6 +416,10 @@
               "limits": {
                 "memory": "512Mi",
                 "cpu": "1"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "volumeMounts": [

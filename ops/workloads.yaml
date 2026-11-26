@@ -45,6 +45,10 @@
               "limits": {
                 "memory": "192Mi",
                 "cpu": "100m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "command": [
@@ -118,6 +122,10 @@
               "limits": {
                 "memory": "128Mi",
                 "cpu": "500m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "command": [
@@ -190,6 +198,10 @@
               "limits": {
                 "memory": "256Mi",
                 "cpu": "500m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "ports": [
@@ -265,6 +277,10 @@
               "limits": {
                 "memory": "128Mi",
                 "cpu": "500m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "ports": [
@@ -326,6 +342,10 @@
               "limits": {
                 "memory": "384Mi",
                 "cpu": "500m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "command": [
@@ -409,6 +429,10 @@
               "limits": {
                 "memory": "64Mi",
                 "cpu": "500m"
+              },
+              "requests": {
+                "cpu": "25m",
+                "memory": "32Mi"
               }
             },
             "command": [

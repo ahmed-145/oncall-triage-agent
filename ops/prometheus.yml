@@ -23,8 +23,8 @@ scrape_configs:
       credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
     tls_config:
       insecure_skip_verify: true
-    static_configs:
-      - targets: ['oncall-control-plane:10250']
+    kubernetes_sd_configs:
+      - role: node
   - job_name: kube-state
     static_configs:
       - targets: ['kube-state:8080']

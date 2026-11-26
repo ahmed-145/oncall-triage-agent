@@ -1,5 +1,8 @@
 name: CI
 on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -35,6 +38,7 @@ jobs:
       - if: failure()
         run: |
           kubectl -n oncall get pods -o wide
+          kubectl -n oncall get events --sort-by=.lastTimestamp
           kubectl -n oncall logs deployment/triage --tail=50
           kubectl -n oncall logs deployment/prometheus --tail=50
           kubectl -n oncall logs deployment/alertmanager --tail=50
