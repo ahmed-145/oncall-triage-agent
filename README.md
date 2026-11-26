@@ -50,23 +50,37 @@ make eval
 
 Replay uses ten authored fixtures, including one case with stale signals and one with missing evidence. The live harness injects eight faults and reads the first matching new report per fault. It measures injection-to-observation and alert-to-report time separately. It waits for telemetry to settle between faults and clears injected configuration when the run exits.
 
-**Measured replay results** from Python 3.12, using `make replay` without Ollama. Confidence is a rule score. The false-confidence rate counts fixtures with a wrong top-ranked cause scoring at least 0.8.
+**Measured replay results** from ten fixtures with Ollama and `qwen2.5:0.5b` on a GitHub Actions CPU runner. Confident-and-wrong counts wrong top-ranked causes scoring at least 0.8. These confidence scores are heuristics.
 
-| Mode | Top 1 | Top 3 | Confident and wrong | Live tool calls | Tokens | Model used |
+| Mode | Top 1 | Top 3 | Confident and wrong | Mean latency | Total tokens | Model used |
 |---|---:|---:|---:|---:|---:|---:|
-| Rules | 80% | 90% | 10% | 0 | 0 | 0/10 |
-| Model | 0% | 0% | 0% | 0 | 0 | 0/10 |
-| Hybrid | 80% | 90% | 10% | 0 | 0 | 0/10 |
+| Rules | 80% | 90% | 10% | 0.07 ms | 0 | 0/10 |
+| Model | 20% | 40% | 0% | 911.07 ms | 1,605 | 10/10 |
+| Hybrid | 80% | 90% | 10% | 772.67 ms | 1,691 | 10/10 |
 
-The model row measures behavior with the provider unavailable. The hybrid row measures rules fallback. In the overlapping-signal fixture the rules select the wrong cause first, and in the missing-signal fixture they abstain. Runtime output includes mean latency and local inference cost. These results describe the fixture suite. The live and model runs below record results separately.
+Each replay used zero live evidence calls and $0 in API charges. The model alone missed eight top-ranked causes. Hybrid kept the rules result and added latency on this suite. Rules and hybrid ranked a stale signal first in the overlapping-signal fixture and abstained in the missing-signal fixture. With Ollama unavailable, hybrid also scored 80% top-1 and 90% top-3. [Ollama replay logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45789046156/job/139803111628).
 
-An initial live kind run produced reports for all eight injected faults. Rules ranked the expected cause first for seven cases. CPU throttling produced an alert but the evidence query used a longer window and missed the signal. The agent now uses the same window as the alert. [Initial live evaluation logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45788443733).
+**Live kind results** from one isolated cluster per fault. Rules ranked the expected cause first in all eight cases. Top-3 was 8/8, confident-and-wrong was 0/8, and each investigation used five tools and zero model tokens. [Full evaluation logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45789046156).
+
+| Fault | Injection to observation | Alert to report |
+|---|---:|---:|
+| `bad-deploy` | 32.1 s | 1.03 s |
+| `oom` | 24.8 s | 1.91 s |
+| `cpu-throttle` | 27.6 s | 1.69 s |
+| `slow-query` | 28.0 s | 2.12 s |
+| `crash-loop` | 72.4 s | 2.13 s |
+| `dependency-timeout` | 34.3 s | 1.03 s |
+| `db-leak` | 19.8 s | 1.69 s |
+| `redis-down` | 20.2 s | 1.76 s |
+| **Mean** | **32.4 s** | **1.67 s** |
+
+The first live run scored 7/8. CPU throttling produced an alert, but the evidence query's longer window missed the signal. The rerun used the same window for both queries. [Initial live evaluation logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45788443733).
 
 To compare all three modes using a local model:
 
 ```bash
-ollama pull qwen2.5:3b
-OLLAMA_URL=http://127.0.0.1:11434 make replay
+ollama pull qwen2.5:0.5b
+OLLAMA_URL=http://127.0.0.1:11434 OLLAMA_MODEL=qwen2.5:0.5b make replay
 ```
 
 For live model evaluation, set `OLLAMA_URL` on `deployment/triage` to an Ollama endpoint reachable from the cluster, then run `make eval EVAL_ARGS='--mode hybrid'` or `--mode model`. Set `OLLAMA_MODEL` to select a different model.
@@ -81,5 +95,5 @@ For live model evaluation, set `OLLAMA_URL` on `deployment/triage` to an Ollama 
 ## What I would do next
 
 - Capture real evidence from each injected fault and use those snapshots for replay.
-- Measure the live cluster and Ollama modes separately, then use the failures to tune signal freshness and tie-breaking.
+- Use the replay failures to tune signal freshness and tie-breaking. Re-run the comparison against larger local models.
 - Add persistent reports and distributed trace export. The agent logs each investigation stage under its incident ID.
