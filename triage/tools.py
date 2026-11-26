@@ -20,8 +20,8 @@ METRIC_QUERIES = {
     "redis_errors": 'increase(shop_fault_events_total{signal="redis_errors"}[2m]) > 0',
     "upstream_timeouts": 'increase(shop_fault_events_total{signal="upstream_timeouts"}[2m]) > 0',
     "cpu_throttling": (
-        'rate(container_cpu_cfs_throttled_periods_total{namespace="oncall",container="shop"}[1m])'
-        ' / rate(container_cpu_cfs_periods_total{namespace="oncall",container="shop"}[1m]) > 0.5'
+        'rate(container_cpu_cfs_throttled_periods_total{namespace="oncall",container="shop"}[30s])'
+        ' / rate(container_cpu_cfs_periods_total{namespace="oncall",container="shop"}[30s]) > 0.5'
     ),
 }
 K8S_PATHS = {

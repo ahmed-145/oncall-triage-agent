@@ -19,6 +19,8 @@ flowchart LR
   Agent --> Rules --> Model["Optional Ollama ranking"] --> Report["Markdown report for human review"]
 ```
 
+[Two-minute walkthrough](docs/oncall-demo.mp4)
+
 ## Run the demo
 
 Install Docker, kind, kubectl, Make, and Python 3.12. From the repo root, run:
@@ -46,7 +48,7 @@ make eval EVAL_ARGS='--fault oom'
 make eval
 ```
 
-Replay uses ten authored fixtures, including one case with stale signals and one with missing evidence. The live harness injects eight faults, reads the first matching new report per fault, and measures elapsed time from the injection command to report observation. It waits for telemetry to settle between faults and clears injected configuration when the run exits.
+Replay uses ten authored fixtures, including one case with stale signals and one with missing evidence. The live harness injects eight faults and reads the first matching new report per fault. It measures injection-to-observation and alert-to-report time separately. It waits for telemetry to settle between faults and clears injected configuration when the run exits.
 
 **Measured replay results** from Python 3.12, using `make replay` without Ollama. Confidence is a rule score. The false-confidence rate counts fixtures with a wrong top-ranked cause scoring at least 0.8.
 
@@ -56,7 +58,9 @@ Replay uses ten authored fixtures, including one case with stale signals and one
 | Model | 0% | 0% | 0% | 0 | 0 | 0/10 |
 | Hybrid | 80% | 90% | 10% | 0 | 0 | 0/10 |
 
-The model row measures behavior with the provider unavailable. The hybrid row measures rules fallback. In the overlapping-signal fixture the rules select the wrong cause first, and in the missing-signal fixture they abstain. Runtime output includes mean latency and local inference cost. These results describe the fixture suite. Live fault results and model quality need separate measurements.
+The model row measures behavior with the provider unavailable. The hybrid row measures rules fallback. In the overlapping-signal fixture the rules select the wrong cause first, and in the missing-signal fixture they abstain. Runtime output includes mean latency and local inference cost. These results describe the fixture suite. The live and model runs below record results separately.
+
+An initial live kind run produced reports for all eight injected faults. Rules ranked the expected cause first for seven cases. CPU throttling produced an alert but the evidence query used a longer window and missed the signal. The agent now uses the same window as the alert. [Initial live evaluation logs](https://github.com/ahmed-145/oncall-triage-agent/actions/runs/45788443733).
 
 To compare all three modes using a local model:
 
@@ -78,4 +82,4 @@ For live model evaluation, set `OLLAMA_URL` on `deployment/triage` to an Ollama 
 
 - Capture real evidence from each injected fault and use those snapshots for replay.
 - Measure the live cluster and Ollama modes separately, then use the failures to tune signal freshness and tie-breaking.
-- Add persistent reports and distributed traces before evaluating the design beyond a local cluster.
+- Add persistent reports and distributed trace export. The agent logs each investigation stage under its incident ID.

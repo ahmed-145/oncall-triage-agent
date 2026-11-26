@@ -32,7 +32,18 @@ def model_rank(evidence: list[Evidence], baseline: list[tuple[str, float]]) -> t
     body = {
         "model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
         "stream": False,
-        "format": "json",
+        "format": {
+            "type": "object",
+            "properties": {
+                "causes": {
+                    "type": "array",
+                    "items": {"type": "string", "enum": list(CAUSES)},
+                    "maxItems": 3,
+                },
+            },
+            "required": ["causes"],
+            "additionalProperties": False,
+        },
         "options": {"temperature": 0, "seed": 42, "num_predict": 128},
         "messages": [
             {"role": "system", "content": (
@@ -135,7 +146,8 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
                 result["hypotheses"] = [(key, scores.get(key, 0.5)) for key in keys]
                 result["model_status"] = "used"
                 result["tokens"] = tokens
-            except (OSError, ValueError, KeyError, TypeError):
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                LOGGER.info("investigation=%s model_failure=%s", incident, type(exc).__name__)
                 result["model_status"] = "unavailable"
         return result
 

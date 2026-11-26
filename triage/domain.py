@@ -14,22 +14,22 @@ class Cause:
 
 CAUSES = {
     "bad-deploy": Cause("New shop deployment serves errors", ("release_errors",),
-                        "kubectl -n oncall rollout undo deployment/shop"),
+                        "kubectl --context kind-oncall -n oncall rollout undo deployment/shop"),
     "slow-query": Cause("Slow database query", ("slow_queries",),
-                        "faultctl clear"),
+                        "./faultctl clear"),
     "db-leak": Cause("Database connections exhausted", ("pool_full",),
-                     "faultctl clear"),
+                     "./faultctl clear"),
     "oom": Cause("Shop container exceeded its memory limit", ("oom_killed",),
-                 "faultctl clear"),
+                 "./faultctl clear"),
     "crash-loop": Cause("Shop startup configuration is invalid", ("bad_config",),
-                        "faultctl clear"),
+                        "./faultctl clear"),
     "redis-down": Cause("Redis unavailable", ("redis_errors",),
-                        "kubectl -n oncall scale deployment/redis --replicas=1",
-                        "kubectl -n oncall scale deployment/redis --replicas=0"),
+                        "kubectl --context kind-oncall -n oncall scale deployment/redis --replicas=1",
+                        "kubectl --context kind-oncall -n oncall scale deployment/redis --replicas=0"),
     "dependency-timeout": Cause("Upstream dependency timed out", ("upstream_timeouts",),
-                                "faultctl clear"),
+                                "./faultctl clear"),
     "cpu-throttle": Cause("Shop container CPU throttled", ("cpu_throttling",),
-                          "faultctl clear"),
+                          "./faultctl clear"),
 }
 
 

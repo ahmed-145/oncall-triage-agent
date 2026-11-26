@@ -67,9 +67,16 @@ def webhook(notification: Notification, authorization: str = Header(default=""))
                                 graph=True, tool_calls=len(TOOLS), alert_name=alert_name)
             with tempfile.NamedTemporaryFile(mode="w", dir=folder, delete=False) as handle:
                 handle.write(state["report"])
-            Path(handle.name).replace(target)
-            DURATION.observe(time.monotonic() - started)
-            TOKENS.inc(state["tokens"])
-            INVESTIGATIONS.labels(state["model_status"]).inc()
+            temporary = Path(handle.name)
+            try:
+                target.hardlink_to(temporary)
+            except FileExistsError:
+                pass
+            else:
+                DURATION.observe(time.monotonic() - started)
+                TOKENS.inc(state["tokens"])
+                INVESTIGATIONS.labels(state["model_status"]).inc()
+            finally:
+                temporary.unlink()
         generated.append(target.name)
     return {"reports": generated}
