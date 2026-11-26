@@ -31,7 +31,7 @@ jobs:
             kubectl -n oncall rollout status "deployment/$component" --timeout=120s
           done
           sleep 15
-      - run: make eval EVAL_ARGS='--fault oom --timeout 90'
+      - run: make eval EVAL_ARGS='--fault oom --timeout 90 --require-top1'
       - if: failure()
         run: |
           kubectl -n oncall get pods -o wide

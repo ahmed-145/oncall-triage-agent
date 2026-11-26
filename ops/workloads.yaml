@@ -72,6 +72,24 @@
 }
 ---
 {
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "worker"
+  },
+  "spec": {
+    "selector": {
+      "app": "worker"
+    },
+    "ports": [
+      {
+        "port": 8000
+      }
+    ]
+  }
+}
+---
+{
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
@@ -106,7 +124,18 @@
               "python",
               "-m",
               "shop.worker"
-            ]
+            ],
+            "ports": [
+              {
+                "containerPort": 8000
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/healthz",
+                "port": 8000
+              }
+            }
           }
         ]
       }

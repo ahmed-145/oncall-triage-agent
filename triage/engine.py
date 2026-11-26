@@ -129,8 +129,9 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
                 if mode == "hybrid":
                     keys = [key for key in keys if key in scores]
                     keys.extend(key for key, _ in baseline if key not in keys)
-                result.update(hypotheses=[(key, scores.get(key, 0.5)) for key in keys],
-                              model_status="used", tokens=tokens)
+                result["hypotheses"] = [(key, scores.get(key, 0.5)) for key in keys]
+                result["model_status"] = "used"
+                result["tokens"] = tokens
             except (OSError, ValueError, KeyError, TypeError):
                 result["model_status"] = "unavailable"
         return result
@@ -143,11 +144,12 @@ def investigate(incident: str, collect: Callable[[], list[Evidence]], mode: str 
     started = time.monotonic()
     nodes = (gather, hypothesize, report)
     if graph:
+        from langchain_core.runnables import RunnableLambda
         from langgraph.graph import END, START, StateGraph
 
         workflow = StateGraph(State)
         for node in nodes:
-            workflow.add_node(node.__name__, node)
+            workflow.add_node(node.__name__, RunnableLambda(node))
         path = (START, *(node.__name__ for node in nodes), END)
         for source, target in pairwise(path):
             workflow.add_edge(source, target)

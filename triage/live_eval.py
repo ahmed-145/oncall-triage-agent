@@ -60,6 +60,7 @@ def main() -> None:
     parser.add_argument("--mode", choices=("rules", "model", "hybrid"), default="rules")
     parser.add_argument("--fault", choices=tuple(CAUSES), action="append")
     parser.add_argument("--timeout", type=int, default=75)
+    parser.add_argument("--require-top1", action="store_true")
     args = parser.parse_args()
     rollout("triage")
     kubectl("set", "env", "deployment/triage", f"TRIAGE_MODE={args.mode}")
@@ -87,6 +88,11 @@ def main() -> None:
     print(f"| {args.mode} | {score(rows)} |")
     if any(state["model_status"] == "no report" for _, state, _ in rows):
         raise SystemExit("At least one injected fault produced no report")
+    if args.require_top1 and any(
+        not state["hypotheses"] or state["hypotheses"][0][0] != expected
+        for expected, state, _ in rows
+    ):
+        raise SystemExit("At least one injected fault was ranked incorrectly")
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ def query_prometheus() -> list[Evidence]:
     timestamp = datetime.now(UTC).isoformat()
     records = []
     for signal, query in METRIC_QUERIES.items():
-        link = f"{host}/api/v1/query?{urlencode({'query': query})}"
+        link = f"{host}/api/v1/query?{urlencode({'query': query, 'time': timestamp})}"
         try:
             result = fetch(link)
             if result["status"] != "success":
